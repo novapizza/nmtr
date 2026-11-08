@@ -150,11 +150,11 @@ const VALID_HOSTNAME_RE = /^[a-zA-Z0-9](?:[a-zA-Z0-9._-]{0,253}[a-zA-Z0-9])?$/
 const IPV4_EXTRACT_RE = /(\d{1,3}(?:\.\d{1,3}){3})/
 const IPV6_EXTRACT_RE = /([A-Fa-f0-9]{0,4}:[A-Fa-f0-9:]+[A-Fa-f0-9])/
 
-function isLikelyIPv6(target: string): boolean {
+export function isLikelyIPv6(target: string): boolean {
   return target.includes(':')
 }
 
-function isValidTarget(target: string): boolean {
+export function isValidTarget(target: string): boolean {
   return VALID_IP_RE.test(target) || VALID_HOSTNAME_RE.test(target) || VALID_IPV6_RE.test(target)
 }
 
@@ -165,7 +165,7 @@ function extractIPFromText(text: string, useIPv6: boolean): string | null {
 
 // ─── DNS resolution (cached per-target) ──────────────────────────────────────
 
-function resolveIPv4(host: string): Promise<string> {
+export function resolveIPv4(host: string): Promise<string> {
   // Already an IPv4 address — skip DNS
   if (VALID_IP_RE.test(host)) return Promise.resolve(host)
   return new Promise((resolve) => {

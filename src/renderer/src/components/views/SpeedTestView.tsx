@@ -73,9 +73,13 @@ export function SpeedTestView(): React.JSX.Element {
         { type: 'upload', bytes: 1e7, count: 4 },
         { type: 'download', bytes: 2.5e7, count: 4 },
         { type: 'upload', bytes: 2.5e7, count: 4 },
-        { type: 'download', bytes: 1e8, count: 3 },
+        // speed.cloudflare.com/__down now answers 403 (without CORS headers, so it
+        // surfaces as a "CORS"/connection error) for bytes >= 1e8. Fast links reach
+        // these steps (the engine only escalates while requests finish < ~1 s), so
+        // keep every download below that cap.
+        { type: 'download', bytes: 5e7, count: 4 },
         { type: 'upload', bytes: 5e7, count: 3 },
-        { type: 'download', bytes: 2.5e8, count: 2 }
+        { type: 'download', bytes: 9e7, count: 2 }
       ]
     })
     speedtestRef.current = engine

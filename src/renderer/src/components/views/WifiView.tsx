@@ -268,6 +268,11 @@ export function WifiView(): React.JSX.Element {
 
         {result?.available && (
           <div className="flex flex-col gap-5 max-w-5xl mx-auto">
+            {result.notice && (
+              <div className="rounded-lg border border-border-default bg-canvas-subtle px-4 py-2.5 text-xs text-fg-muted">
+                {result.notice}
+              </div>
+            )}
             {result.connection && <ConnectionCard conn={result.connection} />}
             {result.channelUsage.length > 0 && <ChannelChart usage={result.channelUsage} />}
             <NetworksTable networks={result.networks} />

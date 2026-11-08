@@ -296,6 +296,7 @@ export interface LanScanResult {
   vpnDetected: boolean
   vpnInterfaces: NetworkInterface[]  // subset of interfaces with type vpn/warp
   scanDurationMs: number
+  notice?: string | null             // non-fatal caveat (e.g. macOS Local Network permission missing)
 }
 
 export type LanScanPayload = Record<string, never>  // no params needed
@@ -1044,8 +1045,9 @@ export interface WifiChannelUsage {
 }
 
 export interface WifiScanResult {
-  available: boolean           // false when no WLAN service / adapter / not Windows
+  available: boolean           // false when no WLAN service / adapter / unsupported OS
   reason: string | null        // why unavailable (shown to the user)
+  notice?: string | null       // non-fatal caveat shown above the results (e.g. macOS SSID redaction)
   connection: WifiConnection | null
   networks: WifiNetwork[]
   channelUsage: WifiChannelUsage[]

@@ -88,6 +88,9 @@ function on<T>(channel: string, cb: (payload: T) => void): Unsubscribe {
 }
 
 const nmtrAPI = {
+  /** Host OS — lets the renderer adapt chrome (e.g. macOS traffic lights vs. Windows buttons). */
+  platform: process.platform,
+
   // ── Trace control ──────────────────────────────────────────────────────────
   traceStart: (payload: TraceStartPayload): Promise<TraceStartResult> =>
     ipcRenderer.invoke(IPC.TRACE_START, payload),

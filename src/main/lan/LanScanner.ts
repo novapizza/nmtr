@@ -140,20 +140,54 @@ function ipInSubnet(ip: string, cidr: string): boolean {
 const VPN_PATTERNS = [
   /tap/i, /tun/i, /vpn/i, /wireguard/i, /wg\d/i, /nordlynx/i,
   /proton/i, /mullvad/i, /openvpn/i, /zerotier/i, /tailscale/i,
-  /utun/i, /ppp\d/i
+  /utun/i, /ppp\d/i, /ipsec/i
 ]
 
 const WARP_PATTERNS = [
   /cloudflare/i, /warp/i, /cf-warp/i, /1\.1\.1\.1/i
 ]
 
-function classifyInterface(name: string, _ip: string): NetworkInterface['type'] {
+function classifyInterface(name: string, _ip: string, hardwarePort?: string): NetworkInterface['type'] {
   if (WARP_PATTERNS.some((p) => p.test(name))) return 'warp'
   if (VPN_PATTERNS.some((p) => p.test(name))) return 'vpn'
+  // macOS: BSD names (en0, en1…) don't say whether they're Wi-Fi or wired —
+  // the hardware-port name from networksetup does ("Wi-Fi", "Ethernet", "USB 10/100/1000 LAN").
+  if (hardwarePort) {
+    if (/wi-?fi|airport/i.test(hardwarePort)) return 'wifi'
+    if (/ethernet|lan|thunderbolt/i.test(hardwarePort)) return 'ethernet'
+  }
   if (/wi-?fi|wlan|wireless|airport/i.test(name)) return 'wifi'
   if (/eth|en\d|ethernet|local area/i.test(name)) return 'ethernet'
   if (/lo|loopback/i.test(name)) return 'loopback'
   return 'other'
+}
+
+/**
+ * macOS: map BSD device names to hardware-port names via
+ * `networksetup -listallhardwareports`:
+ *
+ *   Hardware Port: Wi-Fi
+ *   Device: en0
+ */
+export function parseHardwarePorts(out: string): Map<string, string> {
+  const map = new Map<string, string>()
+  let port: string | null = null
+  for (const line of out.split(/\r?\n/)) {
+    const p = line.match(/^Hardware Port:\s*(.+)$/)
+    if (p) { port = p[1].trim(); continue }
+    const d = line.match(/^Device:\s*(\S+)/)
+    if (d && port) { map.set(d[1], port); port = null }
+  }
+  return map
+}
+
+async function getHardwarePorts(): Promise<Map<string, string>> {
+  if (process.platform !== 'darwin') return new Map()
+  try {
+    return parseHardwarePorts(await runSpawn('/usr/sbin/networksetup', ['-listallhardwareports'], 5000))
+  } catch {
+    return new Map()
+  }
 }
 
 // ── Gateway detection ────────────────────────────────────────────────────────
@@ -165,6 +199,9 @@ async function getDefaultGateway(): Promise<string | null> {
       // Look for the default route line: 0.0.0.0  0.0.0.0  <gateway>
       const match = out.match(/0\.0\.0\.0\s+0\.0\.0\.0\s+([\d.]+)/)
       return match?.[1] ?? null
+    } else if (process.platform === 'darwin') {
+      const out = await runSpawn('/sbin/route', ['-n', 'get', 'default'], 5000)
+      return out.match(/gateway:\s*([\d.]+)/)?.[1] ?? null
     } else {
       const out = await run('ip route show default 2>/dev/null || netstat -rn 2>/dev/null')
       const match = out.match(/default\s+via\s+([\d.]+)/) || out.match(/default\s+([\d.]+)/)
@@ -177,31 +214,47 @@ async function getDefaultGateway(): Promise<string | null> {
 
 // ── ARP table parsing ────────────────────────────────────────────────────────
 
-interface ArpEntry {
+export interface ArpEntry {
   ip: string
   mac: string
 }
 
+/**
+ * Parse `arp -a` (Windows) / `arp -an` (macOS, Linux) output.
+ *
+ *   Windows: "  192.168.1.1    aa-bb-cc-dd-ee-ff   dynamic"
+ *   Linux:   "? (192.168.1.1) at aa:bb:cc:dd:ee:ff [ether] on eth0"
+ *   macOS:   "? (192.168.1.1) at c:28:aa:5e:7:b4 on en0 ifscope [ethernet]"
+ *
+ * macOS drops leading zeros in each octet, so octets are 1–2 hex digits and
+ * get zero-padded back to the canonical aa:bb:cc:dd:ee:ff form.
+ */
+export function parseArpOutput(out: string): ArpEntry[] {
+  const entries: ArpEntry[] = []
+  for (const line of out.split(/\r?\n/)) {
+    let match = line.match(/([\d.]+)\s+((?:[\da-f]{2}[:-]){5}[\da-f]{2})/i)
+    if (!match) {
+      match = line.match(/\(([\d.]+)\)\s+at\s+((?:[\da-f]{1,2}:){5}[\da-f]{1,2})\b/i)
+    }
+    if (!match) continue
+    const mac = match[2]
+      .split(/[:-]/)
+      .map((o) => o.padStart(2, '0'))
+      .join(':')
+      .toLowerCase()
+    if (mac !== 'ff:ff:ff:ff:ff:ff' && mac !== '00:00:00:00:00:00') {
+      entries.push({ ip: match[1], mac })
+    }
+  }
+  return entries
+}
+
 async function getArpTable(): Promise<ArpEntry[]> {
   try {
-    const out = await run('arp -a')
-    const entries: ArpEntry[] = []
-    const lines = out.split('\n')
-    for (const line of lines) {
-      // Windows: "  192.168.1.1    aa-bb-cc-dd-ee-ff   dynamic"
-      // Unix:    "? (192.168.1.1) at aa:bb:cc:dd:ee:ff [ether] on eth0"
-      let match = line.match(/([\d.]+)\s+([\da-f]{2}[:-][\da-f]{2}[:-][\da-f]{2}[:-][\da-f]{2}[:-][\da-f]{2}[:-][\da-f]{2})/i)
-      if (!match) {
-        match = line.match(/\(([\d.]+)\)\s+at\s+([\da-f]{2}:[\da-f]{2}:[\da-f]{2}:[\da-f]{2}:[\da-f]{2}:[\da-f]{2})/i)
-      }
-      if (match) {
-        const mac = match[2].replace(/-/g, ':').toLowerCase()
-        if (mac !== 'ff:ff:ff:ff:ff:ff' && mac !== '00:00:00:00:00:00') {
-          entries.push({ ip: match[1], mac })
-        }
-      }
-    }
-    return entries
+    // -n skips the per-entry reverse DNS that makes `arp -a` crawl on macOS/Linux
+    // (on Windows `-n` means something else, so keep plain `arp -a` there).
+    const out = await run(process.platform === 'win32' ? 'arp -a' : 'arp -an')
+    return parseArpOutput(out)
   } catch {
     return []
   }
@@ -398,6 +451,16 @@ function inferVendorFromHostname(hostname: string | null): string | null {
   return null
 }
 
+/**
+ * macOS (15+): without Local Network permission the kernel redacts link-layer
+ * addresses for this app — our own interfaces report 02:00:00:00:00:00 and
+ * `arp -an` (run as our child) returns no neighbours at all.
+ */
+function macLocalNetworkBlocked(ifaces: NetworkInterface[]): boolean {
+  if (process.platform !== 'darwin') return false
+  return ifaces.some((i) => (i.type === 'wifi' || i.type === 'ethernet') && i.mac === '02:00:00:00:00:00')
+}
+
 // ── Ping sweep (fills ARP cache) ─────────────────────────────────────────────
 
 async function pingSweep(cidr: string): Promise<void> {
@@ -412,15 +475,19 @@ async function pingSweep(cidr: string): Promise<void> {
 
   // Parallel ping (fire and forget, just to populate ARP)
   const isWin = process.platform === 'win32'
+  const isMac = process.platform === 'darwin'
   const batchSize = 50
   for (let start = 1; start <= maxHosts; start += batchSize) {
     const end = Math.min(start + batchSize - 1, maxHosts)
     const promises: Promise<void>[] = []
     for (let i = start; i <= end; i++) {
       const ip = `${base}.${i}`
+      // Wait units: Windows -w and macOS -W are milliseconds, Linux -W is seconds.
       const args = isWin
         ? ['-n', '1', '-w', '200', ip]
-        : ['-c', '1', '-W', '1', ip]
+        : isMac
+          ? ['-n', '-c', '1', '-W', '300', ip]
+          : ['-c', '1', '-W', '1', ip]
       promises.push(runSpawn('ping', args, 3000).then(() => {}).catch(() => {}))
     }
     await Promise.all(promises)
@@ -434,7 +501,7 @@ export async function scanLan(): Promise<LanScanResult> {
 
   // 1. Enumerate local interfaces
   const osIfaces = networkInterfaces()
-  const gateway = await getDefaultGateway()
+  const [gateway, hardwarePorts] = await Promise.all([getDefaultGateway(), getHardwarePorts()])
   const ifaces: NetworkInterface[] = []
   const selfIps = new Set<string>()
 
@@ -442,7 +509,7 @@ export async function scanLan(): Promise<LanScanResult> {
     if (!addrs) continue
     for (const addr of addrs) {
       if (addr.family !== 'IPv4' || addr.internal) continue
-      const type = classifyInterface(name, addr.address)
+      const type = classifyInterface(name, addr.address, hardwarePorts.get(name))
       if (type === 'loopback') continue
       selfIps.add(addr.address)
       ifaces.push({
@@ -530,6 +597,10 @@ export async function scanLan(): Promise<LanScanResult> {
     devices,
     vpnDetected: vpnInterfaces.length > 0,
     vpnInterfaces,
-    scanDurationMs: Date.now() - start
+    scanDurationMs: Date.now() - start,
+    notice: macLocalNetworkBlocked(ifaces)
+      ? 'macOS is hiding other devices because nmtr does not have Local Network access. ' +
+        'Allow it in System Settings → Privacy & Security → Local Network, then rescan.'
+      : null
   }
 }

@@ -11,3 +11,12 @@ export interface IProberEngine {
   /** Clean up any open socket handles. */
   destroy(): void
 }
+
+/** Route discovery via the OS trace tool (tracert on Windows, traceroute on macOS). */
+export interface IDiscoveryEngine {
+  discoverHops(
+    target: string,
+    maxHops: number,
+    useIPv6?: boolean
+  ): Promise<{ hops: Map<number, string>; rawOutput: string; error: string | null }>
+}
