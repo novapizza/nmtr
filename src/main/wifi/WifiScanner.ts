@@ -2,7 +2,8 @@
  * Wi-Fi / Wireless analyzer
  *
  * Reads the wireless adapter's current association and scans for nearby access
- * points using the built-in `netsh wlan` commands on Windows. Everything is
+ * points using the built-in `netsh wlan` commands on Windows (macOS: see
+ * scanWifiMac / macWifiParser.ts — system_profiler). Everything is
  * parsed from stdout — no third-party tools, nothing leaves the machine.
  *
  *   netsh wlan show interfaces          → the connection we're associated with
@@ -13,6 +14,7 @@
  * internally: dBm ≈ percent/2 − 100 (so 100% ≈ −50 dBm, 0% ≈ −100 dBm).
  */
 import { spawn } from 'child_process'
+import { parseSystemProfilerWifi } from './macWifiParser'
 import type { WifiBand, WifiConnection, WifiNetwork, WifiChannelUsage, WifiScanResult } from '../../shared/types'
 
 // ── Subprocess helper (argv array, never a shell) ─────────────────────────────
@@ -209,8 +211,9 @@ export async function scanWifi(): Promise<WifiScanResult> {
     available: false, reason, connection: null, networks: [], channelUsage: [], scanDurationMs: Date.now() - start
   })
 
+  if (process.platform === 'darwin') return scanWifiMac(start, unavailable)
   if (process.platform !== 'win32') {
-    return unavailable('Wi-Fi analysis is currently supported on Windows only.')
+    return unavailable('Wi-Fi analysis is currently supported on Windows and macOS only.')
   }
 
   let ifaceOut: string
@@ -242,6 +245,37 @@ export async function scanWifi(): Promise<WifiScanResult> {
     connection,
     networks,
     channelUsage: buildChannelUsage(networks),
+    scanDurationMs: Date.now() - start
+  }
+}
+
+// ── macOS (system_profiler) ───────────────────────────────────────────────────
+
+async function scanWifiMac(
+  start: number,
+  unavailable: (reason: string) => WifiScanResult
+): Promise<WifiScanResult> {
+  let out: string
+  try {
+    // ~3–4 s: system_profiler triggers a fresh scan.
+    out = await runSpawn('/usr/sbin/system_profiler', ['SPAirPortDataType', '-json'], 30_000)
+  } catch (err) {
+    return unavailable(`Could not run system_profiler: ${err instanceof Error ? err.message : String(err)}`)
+  }
+
+  const parsed = parseSystemProfilerWifi(out)
+  if (!parsed.interfaceFound) return unavailable('No Wi-Fi adapter found.')
+
+  return {
+    available: true,
+    reason: null,
+    notice: parsed.ssidsRedacted
+      ? 'macOS hides Wi-Fi network names from apps without Location access, and does not expose BSSIDs. ' +
+        'Channel, band, signal (dBm) and security are still accurate.'
+      : null,
+    connection: parsed.connection,
+    networks: parsed.networks,
+    channelUsage: buildChannelUsage(parsed.networks),
     scanDurationMs: Date.now() - start
   }
 }

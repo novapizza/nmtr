@@ -40,6 +40,12 @@ const WIN_NMAP_PATHS = [
   'C:\\Program Files\\Nmap\\nmap.exe'
 ]
 
+const MAC_NMAP_PATHS = [
+  '/opt/homebrew/bin/nmap', // Homebrew, Apple silicon
+  '/usr/local/bin/nmap',    // Homebrew Intel / official nmap.org installer
+  '/opt/local/bin/nmap'     // MacPorts
+]
+
 let cachedNmap: NmapCheckResult | null = null
 
 function probeNmap(bin: string): Promise<string | null> {
@@ -53,7 +59,7 @@ function probeNmap(bin: string): Promise<string | null> {
   })
 }
 
-/** Locate an nmap binary: PATH first, then known Windows install dirs. Cached. */
+/** Locate an nmap binary: PATH first, then known per-OS install dirs. Cached. */
 export async function checkNmap(force = false): Promise<NmapCheckResult> {
   if (cachedNmap && !force) return cachedNmap
 
@@ -64,14 +70,17 @@ export async function checkNmap(force = false): Promise<NmapCheckResult> {
     return cachedNmap
   }
 
-  // Try known Windows install locations
-  if (process.platform === 'win32') {
-    for (const p of WIN_NMAP_PATHS) {
-      version = await probeNmap(p)
-      if (version) {
-        cachedNmap = { available: true, version, path: p }
-        return cachedNmap
-      }
+  // Try known install locations — GUI apps don't inherit the shell PATH, so on
+  // macOS Homebrew/MacPorts installs are invisible to a bare `nmap` lookup.
+  const knownPaths =
+    process.platform === 'win32' ? WIN_NMAP_PATHS
+    : process.platform === 'darwin' ? MAC_NMAP_PATHS
+    : []
+  for (const p of knownPaths) {
+    version = await probeNmap(p)
+    if (version) {
+      cachedNmap = { available: true, version, path: p }
+      return cachedNmap
     }
   }
 

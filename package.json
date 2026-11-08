@@ -10,6 +10,7 @@
     "preview": "electron-vite preview",
     "dist": "npm run build && electron-builder",
     "dist:win": "npm run build && electron-builder --win",
+    "dist:mac": "npm run build && electron-builder --mac --config electron-builder.cjs",
     "postinstall": "electron-builder install-app-deps || true",
     "rebuild": "electron-rebuild",
     "test": "vitest run --globals",

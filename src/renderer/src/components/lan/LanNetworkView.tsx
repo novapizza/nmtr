@@ -480,6 +480,12 @@ export function LanNetworkView(): React.JSX.Element {
         </div>
       </div>
 
+      {scanResult.notice && (
+        <div className="px-5 py-2 border-b border-border-default bg-canvas-subtle text-xs text-fg-muted flex-shrink-0">
+          {scanResult.notice}
+        </div>
+      )}
+
       {/* ── Topology canvas (top, ~60%) ── */}
       <div ref={containerRef} className="overflow-auto" style={{ flex: '3 1 0%', minHeight: 0 }}>
         <svg width={svgW} height={svgH} className="block mx-auto">

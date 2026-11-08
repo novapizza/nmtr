@@ -2,13 +2,16 @@ import React from 'react'
 import { SettingsDialog } from '../dialogs/SettingsDialog'
 import { useUIStore } from '../../store/useUIStore'
 
+// macOS draws native traffic lights over the left of the bar; Windows gets our own buttons.
+const isMac = window.nmtrAPI.platform === 'darwin'
+
 export function TitleBar(): React.JSX.Element {
   const { settingsOpen, closeSettings } = useUIStore()
 
   return (
     <div className="drag-region flex h-9 items-center justify-between bg-canvas-subtle border-b border-border-default flex-shrink-0 select-none">
       {/* Left: logo */}
-      <div className="flex items-center gap-2.5 px-4 no-drag pointer-events-none">
+      <div className={`flex items-center gap-2.5 pr-4 no-drag pointer-events-none ${isMac ? 'pl-[84px]' : 'pl-4'}`}>
         <span className="font-mono font-bold tracking-tight text-[21px] leading-none">
           <span className="text-fg-muted">{`{`}</span>
           <span className="text-accent-blue">NMTR</span>
@@ -17,8 +20,8 @@ export function TitleBar(): React.JSX.Element {
         <span className="text-fg-subtle text-[18px] font-medium tracking-wide uppercase">Network Diagnostic</span>
       </div>
 
-      {/* Right: Windows-style window controls */}
-      <div className="flex items-stretch h-full no-drag">
+      {/* Right: Windows-style window controls (macOS uses the native traffic lights) */}
+      {!isMac && <div className="flex items-stretch h-full no-drag">
         <button
           className="w-11 flex items-center justify-center text-fg-muted hover:bg-canvas-hover hover:text-fg-default transition-colors"
           onClick={() => window.nmtrAPI.windowMinimize()}
@@ -47,7 +50,7 @@ export function TitleBar(): React.JSX.Element {
             <line x1="10" y1="0" x2="0" y2="10" />
           </svg>
         </button>
-      </div>
+      </div>}
 
       <SettingsDialog open={settingsOpen} onClose={closeSettings} />
     </div>

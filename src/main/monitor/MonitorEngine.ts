@@ -114,9 +114,10 @@ const PING_TIME_RE = /[<=]\s*(\d+(?:\.\d+)?)\s*ms/i
 
 function checkPing(c: MonitorConfig): Promise<CheckOutcome> {
   return new Promise((resolve) => {
-    const isWin = process.platform === 'win32'
-    const args = isWin
-      ? ['-n', '1', '-w', String(CHECK_TIMEOUT_MS), c.target]
+    // -W units differ: Windows -w and macOS -W take milliseconds, Linux -W takes seconds.
+    const args =
+      process.platform === 'win32' ? ['-n', '1', '-w', String(CHECK_TIMEOUT_MS), c.target]
+      : process.platform === 'darwin' ? ['-n', '-c', '1', '-W', String(CHECK_TIMEOUT_MS), c.target]
       : ['-c', '1', '-W', String(Math.ceil(CHECK_TIMEOUT_MS / 1000)), c.target]
     let out = ''
     let settled = false

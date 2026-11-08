@@ -125,6 +125,10 @@ mac:
   gatekeeperAssess: false
   entitlements: build/entitlements.mac.plist
   entitlementsInherit: build/entitlements.mac.plist
+  # Without Local Network permission macOS hides other devices' MAC addresses
+  # (LAN scan) — this string is shown in the system permission prompt.
+  extendInfo:
+    NSLocalNetworkUsageDescription: "nmtr scans your local network to discover devices, gateways and their MAC addresses."
 
 win:
   target:
