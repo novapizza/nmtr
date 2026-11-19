@@ -5,6 +5,7 @@ const path = require('path')
 const base = yaml.load(fs.readFileSync(path.join(__dirname, 'electron-builder.yml'), 'utf8'))
 
 const {
+  AZURE_PUBLISHER_NAME,
   AZURE_TRUSTED_SIGNING_ENDPOINT,
   AZURE_CODE_SIGNING_ACCOUNT_NAME,
   AZURE_CERT_PROFILE_NAME,
@@ -35,6 +36,7 @@ if (process.platform === 'darwin') {
 }
 
 const allAzureVarsSet = [
+  AZURE_PUBLISHER_NAME,
   AZURE_TRUSTED_SIGNING_ENDPOINT,
   AZURE_CODE_SIGNING_ACCOUNT_NAME,
   AZURE_CERT_PROFILE_NAME,
@@ -77,6 +79,7 @@ module.exports = allAzureVarsSet
       win: {
         ...base.win,
         azureSignOptions: {
+          publisherName: AZURE_PUBLISHER_NAME,
           endpoint: AZURE_TRUSTED_SIGNING_ENDPOINT,
           codeSigningAccountName: AZURE_CODE_SIGNING_ACCOUNT_NAME,
           certificateProfileName: AZURE_CERT_PROFILE_NAME,

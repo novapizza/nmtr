@@ -53,7 +53,7 @@
     "zustand": "^5.0.3"
   },
   "overrides": {
-    "nan": "^2.26.0",
+    "nan": "^2.30.0",
     "minimist": ">=1.2.6",
     "underscore": ">=1.13.8",
     "d3-color": ">=3.1.0",
@@ -65,9 +65,9 @@
   "devDependencies": {
     "@electron-toolkit/preload": "^3.0.1",
     "@electron-toolkit/utils": "^3.0.0",
-    "@electron/rebuild": "^3.7.1",
+    "@electron/rebuild": "^4.2.1",
     "@types/ndjson": "^2.0.4",
-    "@types/node": "^22.13.5",
+    "@types/node": "^24.0.0",
     "@types/react": "^18.3.18",
     "@types/react-dom": "^18.3.5",
     "@types/react-simple-maps": "^3.0.6",
@@ -75,8 +75,8 @@
     "@typescript-eslint/parser": "^8.25.0",
     "@vitejs/plugin-react": "^4.3.4",
     "autoprefixer": "^10.4.20",
-    "electron": "^41.2.1",
-    "electron-builder": "^25.1.8",
+    "electron": "^45.4.1",
+    "electron-builder": "^26.18.0",
     "electron-vite": "^3.0.0",
     "eslint": "^9.21.0",
     "postcss": "^8.5.3",
