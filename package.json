@@ -1,6 +1,6 @@
 {
   "name": "nmtr",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "Modern network diagnostic tool — WinMTR rewrite in Electron",
   "main": "./out/main/index.js",
   "scripts": {
