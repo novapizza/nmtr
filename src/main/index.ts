@@ -63,7 +63,7 @@ function registerAppProtocol(): void {
 
 function createWindow(): void {
   const settings = AppSettingsStore.get()
-  const icon = createLogoIcon(32)
+  const icon = createLogoIcon('window')
 
   mainWindow = new BrowserWindow({
     width: 1200,

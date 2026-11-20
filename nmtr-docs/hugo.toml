@@ -16,6 +16,8 @@ uglyURLs      = true
   BookRepo            = "https://github.com/your-org/nmtr"
   BookEditPath        = "edit/main/nmtr-docs/content"
   BookMenuBundle      = false
+  BookLogo            = "logo.svg"
+  BookFavicon         = "favicon.svg"
 
 [[menu.before]]
   name   = "GitHub"

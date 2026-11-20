@@ -107,7 +107,7 @@ files:
 extraResources:
   - from: resources/
     to: .
-    filter: ["tray-icon.png"]
+    filter: ["icon.png", "tray-icon*.png"]
 
 asar: true
 asarUnpack:

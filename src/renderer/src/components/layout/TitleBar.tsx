@@ -1,6 +1,7 @@
 import React from 'react'
 import { SettingsDialog } from '../dialogs/SettingsDialog'
 import { useUIStore } from '../../store/useUIStore'
+import logoUrl from '../../../../../resources/logo.svg'
 
 // macOS draws native traffic lights over the left of the bar; Windows gets our own buttons.
 const isMac = window.nmtrAPI.platform === 'darwin'
@@ -12,11 +13,8 @@ export function TitleBar(): React.JSX.Element {
     <div className="drag-region flex h-9 items-center justify-between bg-canvas-subtle border-b border-border-default flex-shrink-0 select-none">
       {/* Left: logo */}
       <div className={`flex items-center gap-2.5 pr-4 no-drag pointer-events-none ${isMac ? 'pl-[84px]' : 'pl-4'}`}>
-        <span className="font-mono font-bold tracking-tight text-[21px] leading-none">
-          <span className="text-fg-muted">{`{`}</span>
-          <span className="text-accent-blue">NMTR</span>
-          <span className="text-fg-muted">{`}`}</span>
-        </span>
+        <img src={logoUrl} alt="" width={22} height={22} className="flex-shrink-0" draggable={false} />
+        <span className="font-mono font-bold tracking-tight text-[21px] leading-none text-fg-default">NMTR</span>
         <span className="text-fg-subtle text-[18px] font-medium tracking-wide uppercase">Network Diagnostic</span>
       </div>
 
