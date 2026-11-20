@@ -12,7 +12,7 @@ export class TrayManager {
   }
 
   private create(): void {
-    const icon = createLogoIcon(16)
+    const icon = createLogoIcon('tray')
     this.tray = new Tray(icon)
     this.tray.setToolTip('nmtr — Network Diagnostic Tool')
     this.updateMenu()

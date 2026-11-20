@@ -100,7 +100,7 @@ src/
 │   ├── store/           # electron-store wrappers (AppSettings, History, DNS, PortScan, SSL, PubScan, Monitor)
 │   ├── tray/            # System tray manager
 │   ├── updater/         # Auto-updater (electron-updater)
-│   └── utils/           # Shared utilities (logo icon pixel renderer)
+│   └── utils/           # Shared utilities (logo icon loader)
 ├── preload/             # contextBridge → window.nmtrAPI
 └── renderer/            # React + Tailwind UI
     ├── store/           # Zustand stores (trace, UI, settings, recording, history, monitor)
